@@ -1,1 +1,122 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Prestige-Motors</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;800&family=IBM+Plex+Sans:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+:root{--ink:#111318;--red:#c8102e;--bg:#f3f4f6;--g:#5d6470;color-scheme:light}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 'IBM Plex Sans',system-ui,sans-serif}
+h1,h2,h3,button,.brand,label,.price{font-family:Archivo,system-ui,sans-serif}
+header{position:sticky;top:0;z-index:5;background:var(--ink);color:#fff;display:flex;align-items:center;gap:8px;padding:12px 18px;flex-wrap:wrap}
+.brand{font-weight:800;font-size:20px;letter-spacing:.05em;text-transform:uppercase;flex:1}.brand b{color:var(--red)}
+button{font-size:14px;font-weight:800;border:0;border-radius:4px;padding:9px 16px;background:var(--red);color:#fff;cursor:pointer}
+button.g{background:transparent;border:1.5px solid currentColor;color:var(--red)}header button.g{color:#fff}
+button:disabled{opacity:.4;cursor:not-allowed}:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+.hero{padding:64px 20px 34px;max-width:1100px;margin:0 auto}.hero h1{font-size:clamp(36px,8vw,76px);line-height:.95;margin:0 0 12px;font-weight:800;text-transform:uppercase}.hero h1 b{color:var(--red)}.hero p{margin:0;color:var(--g);max-width:52ch}
+.heroW{background:var(--bg) center/cover}.heroW.on{color:#fff}.heroW.on .hero p{color:#e5e7eb}
+.bar{max-width:1100px;margin:0 auto;padding:0 20px 20px;display:flex;gap:10px;flex-wrap:wrap}
+input,select,textarea{font:16px 'IBM Plex Sans',sans-serif;padding:9px;border:1.5px solid #b9bfc7;border-radius:4px;background:#fff;width:100%}
+.bar input{flex:1;min-width:180px;width:auto}.bar select{width:auto}
+main{max-width:1100px;margin:0 auto;padding:0 20px 80px;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px}
+.car{background:#fff;border-radius:6px;overflow:hidden;border:1px solid #dcdfe4;display:flex;flex-direction:column}
+.im{aspect-ratio:16/10;background:#d9dde2 center/cover}.cb{padding:16px;display:flex;flex-direction:column;gap:8px;flex:1}
+.car h3{margin:0;font-size:21px}.price{font-weight:800;font-size:26px}.car p{margin:0;color:var(--g);white-space:pre-line}
+.st{align-self:flex-start;font:800 12px Archivo;text-transform:uppercase;padding:3px 10px;border-radius:99px;color:#fff}
+.disponible{background:#1b7f4b}.reserve{background:#b7791f}.vendu{background:#6b7280}
+label{display:block;font-size:13px;font-weight:800;margin:8px 0 3px}.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+dialog{border:0;border-radius:8px;padding:22px;width:min(94vw,520px);max-height:90vh}dialog::backdrop{background:#000a}dialog h2{margin:0 0 8px}
+fieldset{border:1.5px solid #dcdfe4;border-radius:6px;margin:0 0 14px;padding:4px 14px 14px}legend{font:800 15px Archivo;color:var(--red)}
+.tk{border:1px solid #dcdfe4;border-radius:6px;padding:10px 12px;margin-top:10px}.tk h3{margin:0;font-size:17px}.tk p{margin:4px 0}
+.cd{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid #e5e7eb;font-size:14px}
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:6px;display:none;z-index:9}
+</style></head><body>
+<header><span class="brand">Prestige<b>-Motors</b></span><button class="g" id="bT">Demandes</button><button class="g" id="bU">Connexion</button><button id="bA">Admin</button></header>
+<div class="heroW" id="heroW"><section class="hero"><h1>Votre prochaine <b>voiture</b> vous attend</h1><p>Découvrez les véhicules de notre concession, leur prix et leur disponibilité en temps réel.</p></section></div>
+<div class="bar"><input id="q" placeholder="Rechercher un véhicule" aria-label="Rechercher"><select id="f" aria-label="Disponibilité"><option value="">Toutes disponibilités</option><option value="disponible">Disponible</option><option value="reserve">Réservé</option><option value="vendu">Vendu</option></select></div>
+<main id="main"></main><div id="toast"></div>
 
+<dialog id="dAuth"><h2 id="aT">Connexion</h2><div><label>Nom RP</label><input id="nom"><label>Prénom RP</label><input id="pre"></div><label>Mot de passe</label><input id="mdp" type="password"><div id="aC" hidden><label>Code d'accès</label><input id="cod"></div>
+<div class="row"><button id="aOk">Se connecter</button><button class="g" id="aSw">Créer un compte</button><button class="g" onclick="dAuth.close()">Fermer</button></div></dialog>
+
+<dialog id="dCode"><h2>Accès administrateur</h2><label>Code d'accès</label><input id="adc" type="password"><div class="row"><button id="adOk">Entrer</button><button class="g" onclick="dCode.close()">Annuler</button></div></dialog>
+
+<dialog id="dTk" style="width:min(94vw,600px)"><h2>Demandes</h2><div id="tkF"><label>Sujet</label><input id="tkS"><label>Message</label><textarea id="tkM" rows="3" placeholder="Votre offre, vos disponibilités..."></textarea><div class="row"><button id="tkOk">Envoyer</button></div></div><div id="tkL"></div><div class="row"><button class="g" onclick="dTk.close()">Fermer</button></div></dialog>
+
+<dialog id="dAdm"><h2>Administration</h2>
+<fieldset><legend>Nouveau véhicule</legend><label>Titre</label><input id="vT"><label>Prix (€)</label><input id="vP" type="number" min="0"><label>Disponibilité</label><select id="vS"><option value="disponible">Disponible</option><option value="reserve">Réservé</option><option value="vendu">Vendu</option></select><label>Description</label><textarea id="vD" rows="3"></textarea><label>Image</label><input id="vI" type="file" accept="image/*"><div class="row"><button id="vOk">Ajouter</button></div></fieldset>
+<fieldset><legend>Images de fond</legend><label>Ajouter une ou plusieurs images (elles défilent sur l'accueil)</label><input id="bgI" type="file" accept="image/*" multiple><div class="row"><button id="bgOk">Ajouter</button></div><div id="bgL" style="margin-top:10px"></div></fieldset>
+<fieldset><legend>Codes d'accès</legend><label>Code (vide = généré)</label><input id="kC"><label>Type</label><select id="kR"><option value="compte">Création de compte</option><option value="admin">Admin</option></select><div class="row"><button id="kOk">Créer le code</button></div><div id="kL" style="margin-top:10px"></div></fieldset>
+<p style="font-size:14px;color:var(--g)">Pour modifier prix, disponibilité ou description, change directement la fiche du véhicule sur la page puis clique sur Enregistrer.</p>
+<div class="row"><button class="g" id="adOut">Quitter le mode admin</button><button class="g" onclick="dAdm.close()">Fermer</button></div></dialog>
+
+<script>
+const sb=supabase.createClient('https://tfwonhpqqlljsuwpyrui.supabase.co','sb_publishable_rC_1wo-_DLs1BBsroaqNOA_XKKQ4ZpZ');
+const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ST={disponible:'Disponible',reserve:'Réservé',vendu:'Vendu'},eur=n=>new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(n||0);
+let cars=[],user=null,admin=false,reg=false,pend=null;
+const toast=m=>{const t=$('#toast');t.textContent=m;t.style.display='block';setTimeout(()=>t.style.display='none',3500)};
+const opts=v=>Object.entries(ST).map(([k,l])=>`<option value="${k}"${k===v?' selected':''}>${l}</option>`).join('');
+async function load(){const{data,error}=await sb.from('vehicules').select('*').order('created_at',{ascending:false});if(error)toast('Erreur : '+error.message);cars=data||[];render()}
+function render(){
+ $('#bU').textContent=user?user.prenom+' '+user.nom+' (quitter)':'Connexion';$('#bA').textContent=admin?'Panneau admin':'Admin';
+ const q=$('#q').value.trim().toLowerCase(),f=$('#f').value;
+ const l=cars.filter(c=>(!f||c.status===f)&&(!q||(c.title+' '+(c.description||'')).toLowerCase().includes(q)));
+ $('#main').innerHTML=l.map(c=>`<article class="car" data-id="${c.id}"><div class="im" style="background-image:url('${esc(c.image_url)}')"></div>`+(admin?
+ `<div class="cb"><label>Titre</label><input data-f="title" value="${esc(c.title)}"><label>Prix (€)</label><input data-f="price" type="number" min="0" value="${c.price||0}"><label>Disponibilité</label><select data-f="status">${opts(c.status)}</select><label>Description</label><textarea data-f="description" rows="3">${esc(c.description)}</textarea><label>Changer l'image</label><input type="file" data-img accept="image/*"><div class="row"><button data-save="${c.id}">Enregistrer</button><button class="g" data-del="${c.id}">Supprimer</button></div></div>`
+ :`<div class="cb"><span class="st ${esc(c.status)}">${ST[c.status]||''}</span><h3>${esc(c.title)}</h3><div class="price">${eur(c.price)}</div><p>${esc(c.description)}</p><div class="row"><button data-buy="${c.id}"${c.status==='vendu'?' disabled':''}>Demande d'achat</button></div></div>`)+`</article>`).join('')||'<p>Aucun véhicule pour le moment.</p>'}
+$('#q').oninput=$('#f').onchange=render;
+async function up(f){if(!f)return null;const p=Date.now()+'-'+f.name.replace(/[^\w.]/g,'_');const{error}=await sb.storage.from('media').upload(p,f);if(error)throw error;return sb.storage.from('media').getPublicUrl(p).data.publicUrl}
+async function run(fn,ok){try{await fn();toast(ok);await load()}catch(e){toast('Erreur : '+(e.message||e))}}
+$('#main').onclick=async e=>{const d=e.target.dataset;
+ if(d.save){const el=e.target.closest('.car'),v={};el.querySelectorAll('[data-f]').forEach(i=>v[i.dataset.f]=i.value);v.price=+v.price||0;
+  run(async()=>{const f=el.querySelector('[data-img]').files[0];if(f)v.image_url=await up(f);const{error}=await sb.from('vehicules').update(v).eq('id',d.save);if(error)throw error},'Véhicule mis à jour.')}
+ if(d.del&&confirm('Supprimer ce véhicule ?')){await sb.from('vehicules').delete().eq('id',d.del);load()}
+ if(d.buy){if(!user){toast('Connecte-toi pour faire une demande.');return openAuth()}const c=cars.find(x=>x.id==d.buy);pend=c.id;$('#tkS').value="Demande d'achat : "+c.title;$('#tkM').value='';openTk()}};
+// Comptes (Supabase Auth)
+const mail=(n,p)=>('pm '+n+' '+p).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')+'@gmail.com';
+const setU=ses=>{const m=ses&&ses.user.user_metadata;user=m&&m.nom?{nom:m.nom,prenom:m.prenom}:null;render()};
+function authUI(){$('#aT').textContent=reg?'Créer un compte':'Connexion';$('#aC').hidden=!reg;$('#aOk').textContent=reg?'Créer le compte':'Se connecter';$('#aSw').textContent=reg?"J'ai déjà un compte":'Créer un compte'}
+function openAuth(){reg=false;authUI();dAuth.showModal()}
+$('#bU').onclick=()=>{if(user){user=null;sb.auth.signOut();render()}else openAuth()};
+$('#aSw').onclick=()=>{reg=!reg;authUI()};
+$('#aOk').onclick=async()=>{const nom=$('#nom').value.trim().toLowerCase(),prenom=$('#pre').value.trim().toLowerCase(),pw=$('#mdp').value;
+ if(!nom||!prenom||!pw)return toast('Remplissez tous les champs.');
+ if(reg){if(pw.length<6)return toast('Mot de passe : 6 caractères minimum.');
+  const{data:k,error:ke}=await sb.from('access_codes').select('role').eq('code',$('#cod').value.trim()).maybeSingle();
+  if(ke)return toast('Erreur base de données : '+ke.message);if(!k)return toast("Code d'accès invalide.");
+  const{data,error}=await sb.auth.signUp({email:mail(nom,prenom),password:pw,options:{data:{nom,prenom}}});
+  if(error)return toast(/registered|exists/i.test(error.message)?'Ce nom et prénom existent déjà.':'Erreur : '+error.message);
+  if(!data.session)return toast('Compte créé mais non connecté : désactive "Confirm email" dans Supabase > Authentication.');setU(data.session)}
+ else{const{data,error}=await sb.auth.signInWithPassword({email:mail(nom,prenom),password:pw});
+  if(error)return toast(/invalid/i.test(error.message)?'Identifiants incorrects.':'Erreur : '+error.message);setU(data.session)}
+ dAuth.close();toast('Connecté.')};
+// Demandes (tickets)
+async function tickets(){let q=sb.from('tickets').select('*').order('created_at',{ascending:false});if(!admin)q=q.eq('nom',user.nom).eq('prenom',user.prenom);const{data}=await q;
+ $('#tkL').innerHTML=(data||[]).map(t=>{const c=cars.find(x=>x.id===t.car_id);return`<div class="tk"><h3>${esc(t.sujet)} <small>(${esc(t.status)})</small></h3>${admin?`<small>${esc(t.prenom)} ${esc(t.nom)}</small>`:''}${c?`<small> Véhicule : ${esc(c.title)}, ${eur(c.price)}</small>`:''}<p>${esc(t.message)}</p>${t.reply?`<p><b>Réponse :</b> ${esc(t.reply)}</p>`:''}${admin?`<div class="row">${t.status==='ouvert'?`<button data-tr="${t.id}">Répondre et fermer</button>`:''}<button class="g" data-td="${t.id}">Supprimer</button></div>`:''}</div>`}).join('')||'<p>Aucune demande.</p>'}
+function openTk(){if(!user&&!admin)return toast('Connecte-toi pour utiliser les demandes.');$('#tkF').hidden=!user;tickets();dTk.showModal()}
+$('#bT').onclick=()=>{pend=null;$('#tkS').value='';$('#tkM').value='';openTk()};
+$('#tkOk').onclick=async()=>{if(!$('#tkS').value.trim())return toast('Sujet requis.');const{error}=await sb.from('tickets').insert({nom:user.nom,prenom:user.prenom,car_id:pend,sujet:$('#tkS').value.trim(),message:$('#tkM').value.trim()});if(error)return toast('Erreur : '+error.message);pend=null;$('#tkS').value=$('#tkM').value='';toast('Demande envoyée.');tickets()};
+$('#tkL').onclick=async e=>{const d=e.target.dataset;if(d.tr){const r=prompt('Réponse :');if(r){await sb.from('tickets').update({reply:r,status:'fermé'}).eq('id',d.tr);tickets()}}
+ if(d.td&&confirm('Supprimer cette demande ?')){await sb.from('tickets').delete().eq('id',d.td);tickets()}};
+// Admin (code, mémorisé sur l'appareil et revérifié à chaque ouverture)
+$('#bA').onclick=()=>{if(admin){codes();dAdm.showModal()}else dCode.showModal()};
+$('#adOk').onclick=async()=>{const c=$('#adc').value.trim();const{data}=await sb.from('access_codes').select('role').eq('code',c).eq('role','admin').maybeSingle();
+ if(!data)return toast('Code administrateur invalide.');admin=true;localStorage.pm_admin_code=c;dCode.close();$('#adc').value='';render();codes();dAdm.showModal()};
+$('#adOut').onclick=()=>{admin=false;localStorage.removeItem('pm_admin_code');dAdm.close();render()};
+$('#vOk').onclick=()=>run(async()=>{if(!$('#vT').value)throw'Titre requis';const image_url=await up($('#vI').files[0]);const{error}=await sb.from('vehicules').insert({title:$('#vT').value,price:+$('#vP').value||0,status:$('#vS').value,description:$('#vD').value,image_url});if(error)throw error;['vT','vP','vD','vI'].forEach(i=>$('#'+i).value='')},'Véhicule ajouté.');
+async function codes(){const{data}=await sb.from('access_codes').select('*').order('created_at',{ascending:false});
+ $('#kL').innerHTML=(data||[]).map(k=>`<div class="cd"><span><b>${esc(k.code)}</b> (${k.role==='admin'?'admin':'compte'})</span><button class="g" data-k="${esc(k.code)}">Supprimer</button></div>`).join('')}
+$('#kOk').onclick=async()=>{const c=$('#kC').value.trim()||Math.random().toString(36).slice(2,10).toUpperCase();const{error}=await sb.from('access_codes').insert({code:c,role:$('#kR').value});if(error)return toast('Code déjà existant.');$('#kC').value='';codes();toast('Code créé : '+c)};
+$('#kL').onclick=async e=>{const k=e.target.dataset.k;if(k&&confirm('Supprimer ce code ?')){await sb.from('access_codes').delete().eq('code',k);codes()}};
+sb.auth.getSession().then(({data})=>setU(data.session));
+(async()=>{const c=localStorage.pm_admin_code;if(c){const{data}=await sb.from('access_codes').select('role').eq('code',c).eq('role','admin').maybeSingle();if(data)admin=true;else localStorage.removeItem('pm_admin_code')}load();bgLoad()})();
+// Images de fond
+let bgs=[],bi=0,bt;
+async function bgLoad(){const{data}=await sb.from('site_settings').select('value').eq('key','bg_urls').maybeSingle();try{bgs=JSON.parse(data&&data.value||'[]')}catch(e){bgs=[]}bgShow();bgList()}
+function bgShow(){const w=$('#heroW');clearInterval(bt);w.classList.toggle('on',bgs.length>0);if(!bgs.length){w.style.backgroundImage='';return}
+ const s=()=>{w.style.backgroundImage=`linear-gradient(#111318b0,#111318b0),url('${bgs[bi%bgs.length].replace(/'/g,'%27')}')`;bi++};s();if(bgs.length>1)bt=setInterval(s,6000)}
+async function bgSave(){const{error}=await sb.from('site_settings').upsert({key:'bg_urls',value:JSON.stringify(bgs)});if(error)throw error}
+function bgList(){$('#bgL').innerHTML=bgs.map((u,i)=>`<div class="cd"><img src="${esc(u)}" alt="" width="56" height="36" style="object-fit:cover;border-radius:3px"><button class="g" data-bd="${i}">Retirer</button></div>`).join('')}
+$('#bgOk').onclick=()=>run(async()=>{const fs=[...$('#bgI').files];if(!fs.length)throw'Choisis au moins une image';for(const f of fs)bgs.push(await up(f));await bgSave();$('#bgI').value='';bgShow();bgList()},'Fond mis à jour.');
+$('#bgL').onclick=e=>{const i=e.target.dataset.bd;if(i!==undefined)run(async()=>{bgs.splice(+i,1);await bgSave();bgShow();bgList()},'Image retirée.')};
+</script></body></html>
