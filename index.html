@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Prestige-Motors</title>
+<title>Concessionnaire Peugeot</title>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;800&family=IBM+Plex+Sans:wght@400;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
@@ -8,7 +8,7 @@
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 'IBM Plex Sans',system-ui,sans-serif}
 h1,h2,h3,button,.brand,label,.price{font-family:Archivo,system-ui,sans-serif}
 header{position:sticky;top:0;z-index:5;background:var(--ink);color:#fff;display:flex;align-items:center;gap:8px;padding:12px 18px;flex-wrap:wrap}
-.brand{font-weight:800;font-size:20px;letter-spacing:.05em;text-transform:uppercase;flex:1}.brand b{color:var(--red)}
+.brand{font-weight:800;font-size:20px;letter-spacing:.05em;text-transform:uppercase;flex:1}.brand b{color:var(--red)}.brand{display:flex;align-items:center;gap:10px}.brand img{height:34px;width:auto;object-fit:contain;background:#fff;padding:3px;border-radius:4px}
 button{font-size:14px;font-weight:800;border:0;border-radius:4px;padding:9px 16px;background:var(--red);color:#fff;cursor:pointer}
 button.g{background:transparent;border:1.5px solid currentColor;color:var(--red)}header button.g{color:#fff}
 button:disabled{opacity:.4;cursor:not-allowed}:focus-visible{outline:3px solid var(--red);outline-offset:2px}
@@ -30,7 +30,7 @@ fieldset{border:1.5px solid #dcdfe4;border-radius:6px;margin:0 0 14px;padding:4p
 .cd{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid #e5e7eb;font-size:14px}
 #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:6px;display:none;z-index:9}
 </style></head><body>
-<header><span class="brand">Prestige<b>-Motors</b></span><button class="g" id="bT">Demandes</button><button class="g" id="bU">Connexion</button><button id="bA">Admin</button></header>
+<header><span class="brand"><img id="logo" alt="" hidden><span id="bn">Concessionnaire <b>Peugeot</b></span></span><button class="g" id="bT">Demandes</button><button class="g" id="bU">Connexion</button><button id="bA">Admin</button></header>
 <div class="heroW" id="heroW"><section class="hero"><h1>Votre prochaine <b>voiture</b> vous attend</h1><p>Découvrez les véhicules de notre concession, leur prix et leur disponibilité en temps réel.</p></section></div>
 <div class="bar"><input id="q" placeholder="Rechercher un véhicule" aria-label="Rechercher"><select id="f" aria-label="Disponibilité"><option value="">Toutes disponibilités</option><option value="disponible">Disponible</option><option value="reserve">Réservé</option><option value="vendu">Vendu</option></select></div>
 <main id="main"></main><div id="toast"></div>
@@ -44,6 +44,7 @@ fieldset{border:1.5px solid #dcdfe4;border-radius:6px;margin:0 0 14px;padding:4p
 
 <dialog id="dAdm"><h2>Administration</h2>
 <fieldset><legend>Nouveau véhicule</legend><label>Titre</label><input id="vT"><label>Prix (€)</label><input id="vP" type="number" min="0"><label>Disponibilité</label><select id="vS"><option value="disponible">Disponible</option><option value="reserve">Réservé</option><option value="vendu">Vendu</option></select><label>Description</label><textarea id="vD" rows="3"></textarea><label>Image</label><input id="vI" type="file" accept="image/*"><div class="row"><button id="vOk">Ajouter</button></div></fieldset>
+<fieldset><legend>Nom et logo du site</legend><label>Nom affiché (laisser vide pour garder le nom actuel)</label><input id="idN" placeholder="Concessionnaire Peugeot"><label>Logo (petite image)</label><input id="idI" type="file" accept="image/*"><div class="row"><button id="idOk">Enregistrer</button><button class="g" id="idDel">Retirer le logo</button></div></fieldset>
 <fieldset><legend>Images de fond</legend><label>Ajouter une ou plusieurs images (elles défilent sur l'accueil)</label><input id="bgI" type="file" accept="image/*" multiple><div class="row"><button id="bgOk">Ajouter</button></div><div id="bgL" style="margin-top:10px"></div></fieldset>
 <fieldset><legend>Codes d'accès</legend><label>Code (vide = généré)</label><input id="kC"><label>Type</label><select id="kR"><option value="compte">Création de compte</option><option value="admin">Admin</option></select><div class="row"><button id="kOk">Créer le code</button></div><div id="kL" style="margin-top:10px"></div></fieldset>
 <p style="font-size:14px;color:var(--g)">Pour modifier prix, disponibilité ou description, change directement la fiche du véhicule sur la page puis clique sur Enregistrer.</p>
@@ -109,7 +110,16 @@ async function codes(){const{data}=await sb.from('access_codes').select('*').ord
 $('#kOk').onclick=async()=>{const c=$('#kC').value.trim()||Math.random().toString(36).slice(2,10).toUpperCase();const{error}=await sb.from('access_codes').insert({code:c,role:$('#kR').value});if(error)return toast('Code déjà existant.');$('#kC').value='';codes();toast('Code créé : '+c)};
 $('#kL').onclick=async e=>{const k=e.target.dataset.k;if(k&&confirm('Supprimer ce code ?')){await sb.from('access_codes').delete().eq('code',k);codes()}};
 sb.auth.getSession().then(({data})=>setU(data.session));
-(async()=>{const c=localStorage.pm_admin_code;if(c){const{data}=await sb.from('access_codes').select('role').eq('code',c).eq('role','admin').maybeSingle();if(data)admin=true;else localStorage.removeItem('pm_admin_code')}load();bgLoad()})();
+(async()=>{const c=localStorage.pm_admin_code;if(c){const{data}=await sb.from('access_codes').select('role').eq('code',c).eq('role','admin').maybeSingle();if(data)admin=true;else localStorage.removeItem('pm_admin_code')}load();bgLoad();idLoad()})();
+// Nom et logo
+async function idLoad(){const{data}=await sb.from('site_settings').select('key,value').in('key',['site_logo','site_name']);const m=Object.fromEntries((data||[]).map(r=>[r.key,r.value]));
+ const l=$('#logo');if(m.site_logo){l.src=m.site_logo;l.hidden=false}else l.hidden=true;
+ if(m.site_name){$('#bn').textContent=m.site_name;document.title=m.site_name}else $('#bn').innerHTML='Concessionnaire <b>Peugeot</b>'}
+$('#idOk').onclick=()=>run(async()=>{const n=$('#idN').value.trim(),f=$('#idI').files[0];if(!n&&!f)throw'Saisis un nom ou choisis un logo';
+ if(n){const{error}=await sb.from('site_settings').upsert({key:'site_name',value:n});if(error)throw error}
+ if(f){const value=await up(f);const{error}=await sb.from('site_settings').upsert({key:'site_logo',value});if(error)throw error}
+ $('#idN').value='';$('#idI').value='';await idLoad()},'Nom et logo mis à jour.');
+$('#idDel').onclick=()=>run(async()=>{await sb.from('site_settings').delete().eq('key','site_logo');await idLoad()},'Logo retiré.');
 // Images de fond
 let bgs=[],bi=0,bt;
 async function bgLoad(){const{data}=await sb.from('site_settings').select('value').eq('key','bg_urls').maybeSingle();try{bgs=JSON.parse(data&&data.value||'[]')}catch(e){bgs=[]}bgShow();bgList()}
