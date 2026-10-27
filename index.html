@@ -29,13 +29,20 @@ fieldset{border:1.5px solid #dcdfe4;border-radius:6px;margin:0 0 14px;padding:4p
 .tk{border:1px solid #dcdfe4;border-radius:6px;padding:10px 12px;margin-top:10px}.tk h3{margin:0;font-size:17px}.tk p{margin:4px 0}
 .cd{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid #e5e7eb;font-size:14px}
 #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:6px;display:none;z-index:9}
+[hidden]{display:none!important}.hv.on{background:#fff;color:var(--ink)}
+.at{max-width:1100px;margin:0 auto;padding:30px 20px 80px}.ah{font:800 clamp(30px,6vw,52px) Archivo;text-transform:uppercase;margin:0 0 14px}.at h3{font:800 22px Archivo;text-transform:uppercase;margin:28px 0 10px}
+.plist{background:#fff;border:1px solid #dcdfe4;border-left:6px solid var(--red);border-radius:6px;padding:6px 18px}.pr{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #eceef1;flex-wrap:wrap}.pr:last-child{border:0}.pr b{font:800 20px Archivo}.pr input{width:auto;flex:1;min-width:90px}
+.fm{background:#fff;border:1px solid #dcdfe4;border-radius:6px;padding:16px;max-width:560px}.rd{background:#fff;border:1px solid #dcdfe4;border-radius:6px;padding:12px 14px;margin-top:10px}.rd p{margin:3px 0}
+.sw{display:inline-block;width:14px;height:14px;border-radius:50%;border:1px solid #888;vertical-align:-2px;margin-right:4px}
+.tg{font:800 12px Archivo;text-transform:uppercase;padding:2px 9px;border-radius:99px;color:#fff;background:#6b7280}.tg.nouveau{background:var(--red)}.tg.accepte{background:#1b7f4b}.tg.refuse{background:#8a5a00}
 </style></head><body>
-<header><span class="brand"><img id="logo" alt="" hidden><span id="bn">Concessionnaire <b>Peugeot</b></span></span><button class="g" id="bT">Demandes</button><button class="g" id="bU">Connexion</button><button id="bA">Admin</button></header>
+<header><span class="brand"><img id="logo" alt="" hidden><span id="bn">Concessionnaire <b>Peugeot</b></span></span><button class="g hv on" data-v="cars">Véhicules</button><button class="g hv" data-v="atelier" id="bAt">Atelier</button><button class="g" id="bT">Demandes</button><button class="g" id="bU">Connexion</button><button id="bA">Admin</button></header>
 <div class="heroW" id="heroW"><section class="hero"><h1>Votre prochaine <b>voiture</b> vous attend</h1><p>Découvrez les véhicules de notre concession, leur prix et leur disponibilité en temps réel.</p></section></div>
 <div class="bar"><input id="q" placeholder="Rechercher un véhicule" aria-label="Rechercher"><select id="f" aria-label="Disponibilité"><option value="">Toutes disponibilités</option><option value="disponible">Disponible</option><option value="reserve">Réservé</option><option value="vendu">Vendu</option></select></div>
-<main id="main"></main><div id="toast"></div>
+<main id="main"></main>
+<section class="at" id="atelier" hidden></section><div id="toast"></div>
 
-<dialog id="dAuth"><h2 id="aT">Connexion</h2><div><label>Nom RP</label><input id="nom"><label>Prénom RP</label><input id="pre"></div><label>Mot de passe</label><input id="mdp" type="password"><div id="aC" hidden><label>Code d'accès</label><input id="cod"></div>
+<dialog id="dAuth"><h2 id="aT">Connexion</h2><div><label>Nom RP</label><input id="nom"><label>Prénom RP</label><input id="pre"></div><label>Mot de passe</label><input id="mdp" type="password"><div id="aC" hidden><label>Code d'accès (facultatif)</label><input id="cod" placeholder="Laisse vide si tu n'en as pas"></div>
 <div class="row"><button id="aOk">Se connecter</button><button class="g" id="aSw">Créer un compte</button><button class="g" onclick="dAuth.close()">Fermer</button></div></dialog>
 
 <dialog id="dCode"><h2>Accès administrateur</h2><label>Code d'accès</label><input id="adc" type="password"><div class="row"><button id="adOk">Entrer</button><button class="g" onclick="dCode.close()">Annuler</button></div></dialog>
@@ -54,11 +61,12 @@ fieldset{border:1.5px solid #dcdfe4;border-radius:6px;margin:0 0 14px;padding:4p
 const sb=supabase.createClient('https://tfwonhpqqlljsuwpyrui.supabase.co','sb_publishable_rC_1wo-_DLs1BBsroaqNOA_XKKQ4ZpZ');
 const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const ST={disponible:'Disponible',reserve:'Réservé',vendu:'Vendu'},eur=n=>new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(n||0);
-let cars=[],user=null,admin=false,reg=false,pend=null;
+let cars=[],user=null,admin=false,reg=false,pend=null,tarifs=[],rdvs=[],view='cars',atKey='',rfil='';
 const toast=m=>{const t=$('#toast');t.textContent=m;t.style.display='block';setTimeout(()=>t.style.display='none',3500)};
 const opts=v=>Object.entries(ST).map(([k,l])=>`<option value="${k}"${k===v?' selected':''}>${l}</option>`).join('');
 async function load(){const{data,error}=await sb.from('vehicules').select('*').order('created_at',{ascending:false});if(error)toast('Erreur : '+error.message);cars=data||[];render()}
 function render(){
+ renderAt();
  $('#bU').textContent=user?user.prenom+' '+user.nom+' (quitter)':'Connexion';$('#bA').textContent=admin?'Panneau admin':'Admin';
  const q=$('#q').value.trim().toLowerCase(),f=$('#f').value;
  const l=cars.filter(c=>(!f||c.status===f)&&(!q||(c.title+' '+(c.description||'')).toLowerCase().includes(q)));
@@ -67,7 +75,7 @@ function render(){
  :`<div class="cb"><span class="st ${esc(c.status)}">${ST[c.status]||''}</span><h3>${esc(c.title)}</h3><div class="price">${eur(c.price)}</div><p>${esc(c.description)}</p><div class="row"><button data-buy="${c.id}"${c.status==='vendu'?' disabled':''}>Demande d'achat</button></div></div>`)+`</article>`).join('')||'<p>Aucun véhicule pour le moment.</p>'}
 $('#q').oninput=$('#f').onchange=render;
 async function up(f){if(!f)return null;const p=Date.now()+'-'+f.name.replace(/[^\w.]/g,'_');const{error}=await sb.storage.from('media').upload(p,f);if(error)throw error;return sb.storage.from('media').getPublicUrl(p).data.publicUrl}
-async function run(fn,ok){try{await fn();toast(ok);await load()}catch(e){toast('Erreur : '+(e.message||e))}}
+async function run(fn,ok){try{await fn();toast(ok);await load();await loadAt()}catch(e){toast('Erreur : '+(e.message||e))}}
 $('#main').onclick=async e=>{const d=e.target.dataset;
  if(d.save){const el=e.target.closest('.car'),v={};el.querySelectorAll('[data-f]').forEach(i=>v[i.dataset.f]=i.value);v.price=+v.price||0;
   run(async()=>{const f=el.querySelector('[data-img]').files[0];if(f)v.image_url=await up(f);const{error}=await sb.from('vehicules').update(v).eq('id',d.save);if(error)throw error},'Véhicule mis à jour.')}
@@ -83,8 +91,7 @@ $('#aSw').onclick=()=>{reg=!reg;authUI()};
 $('#aOk').onclick=async()=>{const nom=$('#nom').value.trim().toLowerCase(),prenom=$('#pre').value.trim().toLowerCase(),pw=$('#mdp').value;
  if(!nom||!prenom||!pw)return toast('Remplissez tous les champs.');
  if(reg){if(pw.length<6)return toast('Mot de passe : 6 caractères minimum.');
-  const{data:k,error:ke}=await sb.from('access_codes').select('role').eq('code',$('#cod').value.trim()).maybeSingle();
-  if(ke)return toast('Erreur base de données : '+ke.message);if(!k)return toast("Code d'accès invalide.");
+  const code=$('#cod').value.trim();if(code){const{data:k,error:ke}=await sb.from('access_codes').select('role').eq('code',code).maybeSingle();if(ke)return toast('Erreur base de données : '+ke.message);if(!k)return toast("Code d'accès invalide. Laisse le champ vide si tu n'en as pas.")}
   const{data,error}=await sb.auth.signUp({email:mail(nom,prenom),password:pw,options:{data:{nom,prenom}}});
   if(error)return toast(/registered|exists/i.test(error.message)?'Ce nom et prénom existent déjà.':'Erreur : '+error.message);
   if(!data.session)return toast('Compte créé mais non connecté : désactive "Confirm email" dans Supabase > Authentication.');setU(data.session)}
@@ -110,7 +117,35 @@ async function codes(){const{data}=await sb.from('access_codes').select('*').ord
 $('#kOk').onclick=async()=>{const c=$('#kC').value.trim()||Math.random().toString(36).slice(2,10).toUpperCase();const{error}=await sb.from('access_codes').insert({code:c,role:$('#kR').value});if(error)return toast('Code déjà existant.');$('#kC').value='';codes();toast('Code créé : '+c)};
 $('#kL').onclick=async e=>{const k=e.target.dataset.k;if(k&&confirm('Supprimer ce code ?')){await sb.from('access_codes').delete().eq('code',k);codes()}};
 sb.auth.getSession().then(({data})=>setU(data.session));
-(async()=>{const c=localStorage.pm_admin_code;if(c){const{data}=await sb.from('access_codes').select('role').eq('code',c).eq('role','admin').maybeSingle();if(data)admin=true;else localStorage.removeItem('pm_admin_code')}load();bgLoad();idLoad()})();
+(async()=>{const c=localStorage.pm_admin_code;if(c){const{data}=await sb.from('access_codes').select('role').eq('code',c).eq('role','admin').maybeSingle();if(data)admin=true;else localStorage.removeItem('pm_admin_code')}load();bgLoad();idLoad();loadAt()})();
+// Atelier mécanique : tarifs, rendez-vous, requêtes admin
+const SL={nouveau:'Nouveau',accepte:'Accepté',termine:'Terminé',refuse:'Refusé'},tcc=t=>t.price>0?eur(t.price)+' TCC':'Sur devis';
+async function loadAt(){const t=await sb.from('atelier_tarifs').select('*').order('position').order('id');tarifs=t.data||[];
+ if(admin||user){let q=sb.from('rdv').select('*').order('created_at',{ascending:false});if(!admin)q=q.eq('nom',user.nom).eq('prenom',user.prenom);rdvs=(await q).data||[]}else rdvs=[];
+ const n=admin?rdvs.filter(r=>r.status==='nouveau').length:0;$('#bAt').textContent='Atelier'+(n?` (${n})`:'');if(t.error)toast('Atelier : '+t.error.message);renderAt()}
+function setView(v){view=v;['#heroW','.bar','#main'].forEach(x=>$(x).hidden=v!=='cars');$('#atelier').hidden=v!=='atelier';document.querySelectorAll('.hv').forEach(b=>b.classList.toggle('on',b.dataset.v===v));if(v==='atelier'){atKey='';renderAt()}}
+document.querySelectorAll('.hv').forEach(b=>b.onclick=()=>setView(b.dataset.v));
+const rdH=r=>{const c=r.couleur?(/\((#[0-9a-f]{6})\)$/i.exec(r.couleur)||[]):[];return`<div class="rd"><p><span class="tg ${esc(r.status)}">${SL[r.status]||esc(r.status)}</span> <b>${esc(r.service)}</b> · ${r.prix>0?eur(r.prix)+' TCC':'sur devis'}</p>${admin?`<p>Client : ${esc(r.prenom)} ${esc(r.nom)}</p>`:''}<p>Véhicule : ${esc(r.modele)} · plaque ${esc(r.plaque)}</p>${r.couleur?`<p>Nouvelle couleur : <span class="sw" style="background:${c[1]||'#ccc'}"></span>${esc(r.couleur)}</p>`:''}${r.date_souhaitee?`<p>Souhaité : ${esc(r.date_souhaitee)}</p>`:''}${r.message?`<p>Message : ${esc(r.message)}</p>`:''}${r.reply?`<p><b>Réponse :</b> ${esc(r.reply)}</p>`:''}<small>${new Date(r.created_at).toLocaleString('fr-FR')}</small>${admin?`<div class="row">${r.status!=='accepte'?`<button data-rs="accepte" data-id="${r.id}">Accepter</button>`:''}${r.status!=='termine'?`<button class="g" data-rs="termine" data-id="${r.id}">Terminé</button>`:''}${r.status!=='refuse'?`<button class="g" data-rs="refuse" data-id="${r.id}">Refuser</button>`:''}<button class="g" data-rdel="${r.id}">Supprimer</button></div>`:''}</div>`};
+function renderAt(){if(view!=='atelier')return;const k=(admin?'A':'')+(user?user.nom+'|'+user.prenom:'');if(k!==atKey){atKey=k;return loadAt()}
+ let h=`<h2 class="ah">Atelier mécanique</h2><div class="plist">${tarifs.map(t=>admin?`<div class="pr"><input data-tf="label" value="${esc(t.label)}"><input data-tf="price" type="number" min="0" value="${t.price}"><button data-ts="${t.id}">Enregistrer</button><button class="g" data-tdel="${t.id}">Supprimer</button></div>`:`<div class="pr"><span>${esc(t.label)}</span><b>${tcc(t)}</b></div>`).join('')||'<p>Aucun tarif pour le moment.</p>'}${admin?`<div class="pr"><input id="tnL" placeholder="Nouveau service"><input id="tnP" type="number" min="0" placeholder="Prix"><label style="display:flex;gap:6px;align-items:center;margin:0"><input id="tnC" type="checkbox" style="width:auto">Couleur</label><button id="tnOk">Ajouter</button></div>`:''}</div>`;
+ h+='<h3>Prendre rendez-vous</h3>'+(user?`<div class="fm"><label>Prestation</label><select id="rS">${tarifs.map(t=>`<option value="${t.id}">${esc(t.label)} (${tcc(t)})</option>`).join('')}</select><label>Modèle du véhicule</label><input id="rM"><label>Plaque</label><input id="rP"><div id="rC"><label>Nouvelle couleur</label><div class="row" style="margin:0"><input id="rCc" type="color" value="#c8102e" style="width:60px;padding:2px"><input id="rCn" placeholder="Nom de la couleur" style="flex:1"></div></div><label>Date / heure souhaitée</label><input id="rD" placeholder="Ex : demain 18h"><label>Message (facultatif)</label><textarea id="rX" rows="2"></textarea><p class="price" id="rPr"></p><div class="row"><button id="rOk">Envoyer la demande</button></div></div>`:'<p>Connecte-toi pour prendre rendez-vous.</p>');
+ if(user&&!admin)h+=`<h3>Mes rendez-vous</h3>${rdvs.map(rdH).join('')||'<p>Aucun rendez-vous pour le moment.</p>'}`;
+ if(admin){const l=rdvs.filter(r=>!rfil||r.status===rfil);h+=`<h3>Requêtes des clients</h3><select id="rF" style="max-width:240px"><option value="">Toutes (${rdvs.length})</option>${Object.entries(SL).map(([k,v])=>`<option value="${k}"${rfil===k?' selected':''}>${v} (${rdvs.filter(r=>r.status===k).length})</option>`).join('')}</select>${l.map(rdH).join('')||'<p>Aucune requête.</p>'}`}
+ $('#atelier').innerHTML=h;
+ const upd=()=>{const t=tarifs.find(x=>x.id==($('#rS')||{}).value);if(!$('#rS'))return;$('#rC').hidden=!(t&&t.is_color);$('#rPr').textContent=t?'Prix : '+tcc(t):''};if($('#rS')){$('#rS').onchange=upd;upd()}}
+$('#atelier').addEventListener('click',async e=>{const d=e.target.dataset,id=e.target.id;
+ if(d.ts){const r=e.target.closest('.pr');run(async()=>{const{error}=await sb.from('atelier_tarifs').update({label:r.querySelector('[data-tf=label]').value.trim(),price:+r.querySelector('[data-tf=price]').value||0}).eq('id',d.ts);if(error)throw error},'Tarif enregistré.')}
+ if(d.tdel&&confirm('Supprimer ce tarif ?'))run(async()=>{const{error}=await sb.from('atelier_tarifs').delete().eq('id',d.tdel);if(error)throw error},'Tarif supprimé.');
+ if(id==='tnOk')run(async()=>{if(!$('#tnL').value.trim())throw'Nom du service requis';const{error}=await sb.from('atelier_tarifs').insert({label:$('#tnL').value.trim(),price:+$('#tnP').value||0,is_color:$('#tnC').checked,position:Math.max(0,...tarifs.map(t=>t.position||0))+1});if(error)throw error},'Tarif ajouté.');
+ if(id==='rOk'){const t=tarifs.find(x=>x.id==$('#rS').value),modele=$('#rM').value.trim(),plaque=$('#rP').value.trim().toUpperCase();
+  if(!t)return toast('Choisis une prestation.');if(!modele||!plaque)return toast('Modèle et plaque requis.');
+  let couleur=null;if(t.is_color){const n=$('#rCn').value.trim();if(!n)return toast('Indique la nouvelle couleur.');couleur=n+' ('+$('#rCc').value+')'}
+  const{error}=await sb.from('rdv').insert({nom:user.nom,prenom:user.prenom,tarif_id:t.id,service:t.label,prix:t.price,modele,plaque,couleur,date_souhaitee:$('#rD').value.trim(),message:$('#rX').value.trim()});
+  if(error)return toast('Erreur : '+error.message);toast("Demande envoyée, l'atelier te répondra.");loadAt()}
+ if(d.rs){const m=d.rs==='refuse'?'Motif du refus (facultatif) :':d.rs==='accepte'?'Message pour le client, par exemple la date confirmée (facultatif) :':null,r=m?prompt(m,''):'';if(r===null)return;
+  const{error}=await sb.from('rdv').update(r?{status:d.rs,reply:r}:{status:d.rs}).eq('id',d.id);if(error)return toast('Erreur : '+error.message);loadAt()}
+ if(d.rdel&&confirm('Supprimer cette requête ?')){await sb.from('rdv').delete().eq('id',d.rdel);loadAt()}});
+$('#atelier').addEventListener('change',e=>{if(e.target.id==='rF'){rfil=e.target.value;renderAt()}});
 // Nom et logo
 async function idLoad(){const{data}=await sb.from('site_settings').select('key,value').in('key',['site_logo','site_name']);const m=Object.fromEntries((data||[]).map(r=>[r.key,r.value]));
  const l=$('#logo');if(m.site_logo){l.src=m.site_logo;l.hidden=false}else l.hidden=true;
